@@ -28,12 +28,12 @@ fullPXy = size(stripTemp,2) * numROIs;  % final FOV y size (px)
 imageData = zeros(fullPXx, fullPXy, totalChannel,totalFrame, 'single');
 for channel = 1:totalChannel
     disp(['Assembling channel ' num2str(channel) ' of ' num2str(totalChannel) '...'])
-    frameTemp = zeros(fullPXx, fullPXy / numROIs, 1, totalFrame, 'single');
+
     for strip = 1:numROIs
 
         % Generate the time series of each ROI in the data
         
-        stripTemp = zeros(roiSize(1), roiSize(2), 1, totalFrame);
+        stripTemp = zeros(roiSize(1), roiSize(2), 1, totalFrame, 'single');
         for frame = 1:totalFrame
             stripTemp(:,:,1,frame) = single(roiData{1,strip}.imageData{1,channel}{1,frame}{1,1});
         end
@@ -42,10 +42,8 @@ for channel = 1:totalChannel
         val = round(size(stripTemp,1)*0.03); % trim excess
         stripTemp = stripTemp(val:end,7:138,:,:);
     
-        yy = (strip-1)*fullPXy / numROIs+1:strip*fullPXy / numROIs;
-        frameTemp(:,yy,1,:) = stripTemp;
-
+        yy = (strip-1)*fullPXy / numROIs+1:strip*fullPXy / numROIs; % y indices of current strip
+        imageData(:,yy,channel,:) = stripTemp;
+        
     end
-
-    imageData(:,:,channel,:) = frameTemp;
 end
