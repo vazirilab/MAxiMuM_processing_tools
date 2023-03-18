@@ -12,27 +12,38 @@ FOV = 157.5.*sizeXY;
 numPX = roiGroup.rois(1,1).scanfields.pixelResolutionXY;
 pixelResolution = mean(FOV./numPX);
 
+% find size of final assembled FOV
+strip=1; channel=1; frame=1;
+stripTemp = roiData{1,strip}.imageData{1,channel}{1,frame}{1,1};
+roiSize = size(stripTemp);
+corr = returnScanOffset2(stripTemp,1); % find offset correction
+stripTemp = fixScanPhase(stripTemp,corr,1); % fix scan phase
+val = round(size(stripTemp,1)*0.03); % trim excess
+stripTemp = stripTemp(val:end,7:138,:,:);
+
+fullPXx = size(stripTemp,1);            % final FOV x size (px)
+fullPXy = size(stripTemp,2) * numROIs;  % final FOV y size (px)
+
 %% Assemble frames
-imageData = [];
+imageData = zeros(fullPXx, fullPXy, totalChannel,totalFrame, 'single');
 for channel = 1:totalChannel
     disp(['Assembling channel ' num2str(channel) ' of ' num2str(totalChannel) '...'])
-    frameTemp = [];
+
     for strip = 1:numROIs
 
         % Generate the time series of each ROI in the data
-        stripTemp = [];
+        
+        stripTemp = zeros(roiSize(1), roiSize(2), 1, totalFrame, 'single');
         for frame = 1:totalFrame
-            stripTemp = cat(4,stripTemp,single(roiData{1,strip}.imageData{1,channel}{1,frame}{1,1}));
+            stripTemp(:,:,1,frame) = single(roiData{1,strip}.imageData{1,channel}{1,frame}{1,1});
         end
         corr = returnScanOffset2(stripTemp,1); % find offset correction
         stripTemp = fixScanPhase(stripTemp,corr,1); % fix scan phase
         val = round(size(stripTemp,1)*0.03); % trim excess
         stripTemp = stripTemp(val:end,7:138,:,:);
-
-        frameTemp = cat(2,frameTemp,stripTemp); % create each frame
-
+    
+        yy = (strip-1)*fullPXy / numROIs+1:strip*fullPXy / numROIs; % y indices of current strip
+        imageData(:,yy,channel,:) = stripTemp;
+        
     end
-
-    imageData = single(cat(3,imageData,frameTemp));
-
 end
